@@ -97,7 +97,6 @@ class XLReader
       @orders.push(Order.new(@workbook[@nb_order], @nb_order))
       @nb_order += 1
     end
-
   end
 
   def to_s
@@ -108,6 +107,3 @@ class XLReader
     res
   end
 end
-
-reader = XLReader.new("Orders.xlsx")
-puts reader.orders
