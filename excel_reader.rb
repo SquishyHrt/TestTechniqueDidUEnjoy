@@ -2,19 +2,21 @@ require 'rubyXL'
 
 class Item
   attr_accessor :id, :name, :price, :ref, :warranty, :duration, :package_id
+  @@current_id = 0
 
-  def initialize(id, package_id)
-    @id = id
+  def initialize(package_id)
+    @id = @@current_id
+    @@current_id += 1
     @name = ""
     @price = 0
     @ref = ""
     @warranty = ""
     @duration = 0
-    @package = package_id
+    @package_id = package_id
   end
 
   def to_s
-    "Item: #{@id}, name: #{@name}, price: #{@price}, ref: #{@ref}, warranty: #{@warranty}, duration: #{@duration}, package: #{@package}"
+    "Item: #{@id}, name: #{@name}, price: #{@price}, ref: #{@ref}, warranty: #{@warranty}, duration: #{@duration}, package: #{@package_id}"
   end
 end
 
@@ -33,68 +35,42 @@ class Order
   def initialize(sheet, id)
     @order_id = id
     @sheet = sheet
-    @nb_row = get_nb_row
+    @nb_row = @sheet.count { |row| row != nil }
     @packages = [] # array of Package objects containing items
 
-    # 2 times the same code sry but miss time
     for i in 1..(@nb_row - 1)
       tmp_package_id = @sheet[i][0].value.to_i
       tmp_item_id = @sheet[i][1].value.to_i
       tmp_label = @sheet[i][2].value
       tmp_value = @sheet[i][3].value
 
-      if @packages[tmp_package_id] != nil # if package already exists
-
-        if @packages[tmp_package_id].items[tmp_item_id] != nil # if item already exists in package
-          case tmp_label
-          when "price"
-            @packages[tmp_package_id].items[tmp_item_id].price = tmp_value.to_i
-          when "ref"
-            @packages[tmp_package_id].items[tmp_item_id].ref = tmp_value
-          when "name"
-            @packages[tmp_package_id].items[tmp_item_id].name = tmp_value
-          when "warranty"
-            @packages[tmp_package_id].items[tmp_item_id].warranty = tmp_value
-          when "duration"
-            @packages[tmp_package_id].items[tmp_item_id].duration = (tmp_value != nil) ? tmp_value.to_i : 0
-          else
-            puts "Error: unknown label #{tmp_label}"
-          end
-        else
-          # no item in package so create it
-          @packages[tmp_package_id].items[tmp_item_id] = Item.new(tmp_item_id, tmp_package_id)
-        end
-
-      else # package does not exist so create it and create item
+      if @packages[tmp_package_id] == nil
+        tmp_package_id_concat = id.to_s + tmp_package_id.to_s # order_id + package_id
         @packages[tmp_package_id] = Package.new(tmp_package_id)
-        @packages[tmp_package_id].items[tmp_item_id] = Item.new(tmp_item_id, tmp_package_id)
-        case tmp_label
-        when "price"
-          @packages[tmp_package_id].items[tmp_item_id].price = tmp_value.to_i
-        when "ref"
-          @packages[tmp_package_id].items[tmp_item_id].ref = tmp_value
-        when "name"
-          @packages[tmp_package_id].items[tmp_item_id].name = tmp_value
-        when "warranty"
-          @packages[tmp_package_id].items[tmp_item_id].warranty = tmp_value
-        when "duration"
-          @packages[tmp_package_id].items[tmp_item_id].duration = (tmp_value != nil) ? tmp_value.to_i : 0
-        else
-          puts "Error: unknown label #{tmp_label}"
-        end
+        @packages[tmp_package_id].items[tmp_item_id] = Item.new(tmp_package_id_concat)
       end
-    end # end for
-  end
 
-  # end init
+      if @packages[tmp_package_id].items[tmp_item_id] == nil # if no item in package so create it
+        tmp_package_id_concat = id.to_s + tmp_package_id.to_s # order_id + package_id
+        @packages[tmp_package_id].items[tmp_item_id] = Item.new(tmp_package_id_concat)
+      end
 
-  def get_nb_row
-    res = 0
-    while @sheet[res] != nil
-      res += 1
+      case tmp_label
+      when "price"
+        @packages[tmp_package_id].items[tmp_item_id].price = tmp_value.to_i
+      when "ref"
+        @packages[tmp_package_id].items[tmp_item_id].ref = tmp_value
+      when "name"
+        @packages[tmp_package_id].items[tmp_item_id].name = tmp_value
+      when "warranty"
+        @packages[tmp_package_id].items[tmp_item_id].warranty = tmp_value
+      when "duration"
+        @packages[tmp_package_id].items[tmp_item_id].duration = (tmp_value != nil) ? tmp_value.to_i : 0
+      else
+        puts "Error: unknown label #{tmp_label}"
+      end
+
     end
-
-    res
   end
 
   def to_s
@@ -132,6 +108,3 @@ class XLReader
     res
   end
 end
-
-xl_reader = XLReader.new("Order.xlsx")
-# puts xl_reader

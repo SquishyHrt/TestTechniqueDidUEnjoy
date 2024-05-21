@@ -2,41 +2,22 @@ require_relative 'excel_reader'
 
 require 'pg'
 
-# public.items (
-#     itemid integer NOT NULL,
-#     name text,
-#     price integer,
-#     ref text,
-#     packageid integer NOT NULL,
-#     warranty boolean,
-#     duration integer
-# );
-
-# public.orders (
-#     orderid integer NOT NULL,
-#     odername text NOT NULL
-# );
-
-# public.packages (
-#     packageid integer NOT NULL,
-#     orderid integer NOT NULL
-# );
-
-# first create an order the the package then the items
-
 class DatabaseHandler
   def initialize(dbname)
+    # Just connect to the database
     @conn = PG.connect(dbname: dbname)
   end
-  
-  def add_order(orders) # Orders is a list of order containing items
+
+  # Add all the orders from the orders of XLReader to the database
+  def add_order(orders)
     for i in 0..orders.length - 1
-      tmp_name = "Order #{i + 1}"
+      tmp_name = "Order #{i + 1}" # default name of the excel file
       tmp_id = i + 1
       @conn.exec("INSERT INTO public.orders (orderid, odername) VALUES (#{tmp_id}, '#{tmp_name}')")
     end
   end
-  
+
+  # Add all the packages from the orders of XLReader to the database
   def add_packages(orders)
     for order in orders
       for package in order.packages
@@ -45,23 +26,53 @@ class DatabaseHandler
       end
     end
   end
-  
+
+  # Add all the items from the orders of XLReader to the database
   def add_items(orders)
+    for order in orders
+      for package in order.packages
+        package.items.each { |item|
+          # Set the warranty here
+          if item.warranty == nil || item.warranty == "NO" || item.warranty == ""
+            item.warranty = false
+          else
+            item.warranty = true
+          end
+          @conn.exec("INSERT INTO public.items (itemid, name, price, ref, packageid, warranty, duration) VALUES (#{item.id}, '#{item.name}', #{item.price}, '#{item.ref}', #{item.package_id}, #{item.warranty}, #{item.duration})")
+        }
+      end
+    end
   end
-  
+
+  # given a list of orders created by XLReader, add all the orders, packages and items to the database
   def add_all(orders)
     add_order(orders)
     add_packages(orders)
     add_items(orders)
   end
-  
-end # end class
 
+  def print_orders
+    res = @conn.exec("SELECT * FROM public.orders")
+    res.each do |row|
+      puts row
+    end
+  end
 
+  def print_packages
+    res = @conn.exec("SELECT * FROM public.packages")
+    res.each do |row|
+      puts row
+    end
+  end
 
-db_handler = DatabaseHandler.new('postgres') #yes it should be due but hum...
-xl_reader = XLReader.new("Order.xlsx")
+  def print_items
+    res = @conn.exec("SELECT * FROM public.items")
+    res.each do |row|
+      puts row
+    end
+  end
 
-db_handler.add_order(xl_reader.orders)
-db_handler.add_packages(xl_reader.orders)
-# puts xl_reader.orders
+  def close
+    @conn.close
+  end
+end
