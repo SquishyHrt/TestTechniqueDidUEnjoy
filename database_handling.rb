@@ -37,10 +37,31 @@ class DatabaseHandler
     end
   end
   
+  def add_packages(orders)
+    for order in orders
+      for package in order.packages
+        tmp_package_id = order.order_id.to_s + package.id.to_s
+        @conn.exec("INSERT INTO public.packages (packageid, orderid) VALUES (#{tmp_package_id.to_i}, #{order.order_id})")
+      end
+    end
+  end
   
-end
+  def add_items(orders)
+  end
+  
+  def add_all(orders)
+    add_order(orders)
+    add_packages(orders)
+    add_items(orders)
+  end
+  
+end # end class
+
+
 
 db_handler = DatabaseHandler.new('postgres') #yes it should be due but hum...
 xl_reader = XLReader.new("Order.xlsx")
 
 db_handler.add_order(xl_reader.orders)
+db_handler.add_packages(xl_reader.orders)
+# puts xl_reader.orders
